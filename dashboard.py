@@ -228,3 +228,13 @@ else:
 
 # 資料來源
 st.caption("📊 資料來源：energy_ocpp.db → transactions 表")
+
+if __name__ == "__main__":
+    import os
+    import streamlit.web.cli as stcli
+    import sys
+
+    port = int(os.environ.get("PORT", 8501))
+    sys.argv = ["streamlit", "run", "dashboard.py", "--server.port", str(port), "--server.address", "0.0.0.0"]
+    sys.exit(stcli.main())
+
