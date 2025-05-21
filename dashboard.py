@@ -58,10 +58,8 @@ st.markdown("""
 # 從資料庫讀取
 conn = sqlite3.connect("energy_ocpp.db")
 df = pd.read_sql_query("""
-    
     SELECT id, cp_id, transaction_id, id_tag, start_time, stop_time, meter_start, meter_stop,
            (meter_stop - meter_start) AS used_kwh
-
     FROM transactions
     WHERE meter_start IS NOT NULL AND meter_stop IS NOT NULL
     ORDER BY id DESC
@@ -88,14 +86,13 @@ else:
         max_value=max_date
     )
 
-    df = df[(df['datetime'].dt.date >= start_date) & (df['datetime'].dt.date <=     end_date)]
+    df = df[(df['datetime'].dt.date >= start_date) & (df['datetime'].dt.date <= end_date)]
 
     if selected_cp != "全部":
         df = df[df["cp_id"] == selected_cp]
 
     if search_tag:
         df = df[df["id_tag"].str.contains(search_tag, case=False, na=False)]
-
 
     # 📈 每日用電量趨勢
     with st.container():
@@ -185,13 +182,11 @@ else:
         avg_duration = df['charge_duration'].mean()
         st.info(f"📌 平均充電時間：約 {avg_duration:.1f} 分鐘")
 
-
     # 📋 資料表（含備註、狀態、費率）
     with st.container():
         st.subheader("📋 交易資料表（含備註/狀態/費率）")
         display_df = df.copy()
 
-        # 先檢查欄位存在再依序顯示
         base_cols = [
             "id", "cp_id", "transaction_id", "id_tag",
             "start_time", "stop_time", "meter_start", "meter_stop",
@@ -199,8 +194,6 @@ else:
         ]
         optional_cols = [col for col in ["remark", "status", "rate_type"] if col in display_df.columns]
         st.dataframe(display_df[base_cols + optional_cols])
-
-
 
     # 📤 匯出資料功能
     st.subheader("📤 匯出目前篩選結果")
@@ -228,13 +221,3 @@ else:
 
 # 資料來源
 st.caption("📊 資料來源：energy_ocpp.db → transactions 表")
-
-if __name__ == "__main__":
-    import os
-    import streamlit.web.cli as stcli
-    import sys
-
-    port = int(os.environ.get("PORT", 8501))
-    sys.argv = ["streamlit", "run", "dashboard.py", "--server.port", str(port), "--server.address", "0.0.0.0"]
-    sys.exit(stcli.main())
-
