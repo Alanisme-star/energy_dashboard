@@ -1,0 +1,28 @@
+# 不推送 VSCode 設定
+.vscode/
+
+# 不推送 Python Cache
+__pycache__/
+*.pyc
+
+# 不推送 Streamlit 快取
+.streamlit/
+
+# 忽略所有 .db，但保留 energy_ocpp.db
+*.db
+!energy_ocpp.db
+
+# 不推送 Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# 不推送臨時資料檔案
+*.log
+*.tmp
+*.bak
+
+# Windows 特定檔案
+Thumbs.db
+.DS_Store
+
+# Mac/Linux 系統垃圾
+ehthumbs.db
