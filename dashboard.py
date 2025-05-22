@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-import sqlite3
+import requests
 from config import USERS
+from query_menu import get_charge_point_groups, get_all_transactions
 
-# ✅ Streamlit 設定必須在最前面
+# ✅ Streamlit 設定
 st.set_page_config(
     page_title="能源用電 Dashboard",
     page_icon="⚡",
@@ -55,24 +56,32 @@ st.markdown("""
 <hr>
 """, unsafe_allow_html=True)
 
-# 從資料庫讀取
-conn = sqlite3.connect("energy_ocpp.db")
-df = pd.read_sql_query("""
-    SELECT id, cp_id, transaction_id, id_tag, start_time, stop_time, meter_start, meter_stop,
-           (meter_stop - meter_start) AS used_kwh
-    FROM transactions
-    WHERE meter_start IS NOT NULL AND meter_stop IS NOT NULL
-    ORDER BY id DESC
-""", conn)
-conn.close()
+# 從 API 取得資料
+try:
+    records = get_all_transactions()
+    df = pd.DataFrame(records)
+except Exception as e:
+    st.error(f"❌ 從後端 API 讀取資料失敗：{e}")
+    st.stop()
 
 if df.empty:
     st.warning("目前沒有完整的交易資料（含 meter_start 和 meter_stop）")
 else:
     # 篩選條件
     st.sidebar.header("🔎 篩選條件")
-    cp_options = ["全部"] + sorted(df["cp_id"].unique())
+
+    cp_groups = get_charge_point_groups()
+    cp_options = ["全部"]
+    if cp_groups["with_data"]:
+        cp_options.append("— 有交易紀錄 —")
+        cp_options.extend(cp_groups["with_data"])
+    if cp_groups["registered_only"]:
+        cp_options.append("— 僅註冊未交易 —")
+        cp_options.extend(cp_groups["registered_only"])
+
     selected_cp = st.sidebar.selectbox("選擇充電樁", cp_options)
+    if selected_cp.startswith("—"):
+        selected_cp = "全部"
 
     search_tag = st.sidebar.text_input("搜尋使用者帳號 (id_tag)")
 
@@ -220,4 +229,4 @@ else:
         )
 
 # 資料來源
-st.caption("📊 資料來源：energy_ocpp.db → transactions 表")
+st.caption("📊 資料來源：後端 OCPP REST API")
