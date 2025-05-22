@@ -2,15 +2,12 @@ import streamlit as st
 import pandas as pd
 import requests
 
-# 設定後端 API 基本 URL（Render 上的 URL 或本機測試用 localhost）
 API_BASE_URL = "https://energy-ocpp.onrender.com"
 
-# 頁面標題與介紹
 st.set_page_config(page_title="能源用電視覺分析 Dashboard")
 st.title("⚡ 能源用電視覺分析 Dashboard")
 st.caption("分析充電樁交易、耗電量、分時行為與趨勢")
 
-# 登入驗證（簡易 session 控制）
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -29,12 +26,10 @@ if not st.session_state.logged_in:
     login()
     st.stop()
 
-# 登出按鈕
 if st.button("📕 登出"):
     st.session_state.logged_in = False
     st.rerun()
 
-# 查詢可用充電樁 ID（從後端抓取）
 def get_charge_points():
     try:
         res = requests.get(f"{API_BASE_URL}/api/charge_points")
@@ -44,10 +39,6 @@ def get_charge_points():
         st.warning(f"無法取得充電樁列表：{e}")
     return []
 
-cp_list = get_charge_points()
-selected_cp = st.selectbox("選擇充電樁", options=["全部"] + cp_list)
-
-# 查詢交易資料
 def fetch_transaction_data():
     try:
         res = requests.get(f"{API_BASE_URL}/api/transactions")
@@ -57,15 +48,44 @@ def fetch_transaction_data():
         st.error(f"無法取得交易資料：{e}")
     return pd.DataFrame()
 
+# 資料抓取
+cp_info_list = get_charge_points()
 df = fetch_transaction_data()
 
+# 交易過的 cp_id 集合
+cp_ids_with_data = set(df["cp_id"].unique()) if not df.empty else set()
+
+# 依照是否有交易紀錄分類
+with_data, without_data = [], []
+for cp in cp_info_list:
+    display = f"{cp['id']} ✅" if cp["status"] == "online" else f"{cp['id']} ❌"
+    if cp["id"] in cp_ids_with_data:
+        with_data.append((display, cp["id"]))
+    else:
+        without_data.append((display, cp["id"]))
+
+# 建構下拉選單項目
+dropdown_options = ["全部"]
+dropdown_options += ["─── 📊 有交易紀錄 ───"] + [d[0] for d in with_data]
+dropdown_options += ["─── 💤 僅註冊未交易 ───"] + [d[0] for d in without_data]
+
+selected_display = st.selectbox("選擇充電樁", options=dropdown_options)
+
+# 對應 ID
+selected_cp = None
+for label, cp_id in with_data + without_data:
+    if selected_display == label:
+        selected_cp = cp_id
+        break
+
+# 無交易則直接提示
 if df.empty or "meter_start" not in df.columns or "meter_stop" not in df.columns:
     st.warning("目前沒有完整的交易資料（含 meter_start 和 meter_stop）")
     st.markdown("📊 資料來源：後端 OCPP REST API")
     st.stop()
 
 # 篩選指定充電樁
-if selected_cp != "全部":
+if selected_cp:
     df = df[df["cp_id"] == selected_cp]
 
 # 計算每筆交易用電量
