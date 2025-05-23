@@ -1,5 +1,6 @@
-streamlit
-pandas
-altair
-xlsxwriter
-requests
+# 🔹 前端 Dashboard 相關套件
+streamlit==1.31.1
+pandas==2.2.1
+requests==2.31.0
+altair==5.2.0
+XlsxWriter==3.2.0
